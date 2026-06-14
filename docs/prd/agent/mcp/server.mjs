@@ -95,7 +95,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: 'writePrdFile',
       description:
-        'Create or update a PRD file under docs/prd/. Pass plain-text content (no base64 needed). When updating an existing file, pass its current sha (from readPrdFile).',
+        'Create or update a SINGLE PRD file under docs/prd/. Pass plain-text content (no base64 needed). When updating an existing file, pass its current sha (from readPrdFile). For writing many files at once, prefer writePrdFiles.',
       inputSchema: {
         type: 'object',
         required: ['path', 'content', 'message'],
@@ -104,6 +104,32 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
           content: { type: 'string', description: 'File content as plain text' },
           message: { type: 'string', description: 'Git commit message' },
           sha: { type: 'string', description: 'Current blob sha when updating; omit when creating' },
+          branch: { type: 'string', description: 'Target branch, default main' },
+        },
+      },
+    },
+    {
+      name: 'writePrdFiles',
+      description:
+        'Create or update MULTIPLE PRD files under docs/prd/ in a SINGLE commit. Strongly preferred when writing several files at once (e.g. main + user stories + features) — far faster and avoids per-file round trips. Each file is plain text. Omit sha to create; pass sha to update an existing file.',
+      inputSchema: {
+        type: 'object',
+        required: ['files', 'message'],
+        properties: {
+          files: {
+            type: 'array',
+            description: 'Files to write in one commit',
+            items: {
+              type: 'object',
+              required: ['path', 'content'],
+              properties: {
+                path: { type: 'string', description: 'File path, must start with docs/prd/' },
+                content: { type: 'string', description: 'File content as plain text' },
+                sha: { type: 'string', description: 'Current blob sha when updating; omit when creating' },
+              },
+            },
+          },
+          message: { type: 'string', description: 'Git commit message for the batch' },
           branch: { type: 'string', description: 'Target branch, default main' },
         },
       },
@@ -149,6 +175,38 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           {
             type: 'text',
             text: JSON.stringify({ ok: true, path: data.path, commit: data.commit, sha: data.sha }),
+          },
+        ],
+      };
+    }
+
+    if (name === 'writePrdFiles') {
+      if (!Array.isArray(args.files) || args.files.length === 0) {
+        throw new Error('files must be a non-empty array');
+      }
+      const outFiles = args.files.map((f) => {
+        assertPrdPath(f.path);
+        const entry = { path: f.path, content: f.content };
+        if (f.sha) {
+          entry.sha = f.sha;
+        }
+        return entry;
+      });
+      const data = await opsCall('/repo/put_many', {
+        repo: REPO,
+        branch: args.branch || 'main',
+        message: args.message,
+        files: outFiles,
+      });
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              ok: true,
+              commit: data.commit,
+              files: (data.files || []).map((f) => ({ path: f.path, status: f.status })),
+            }),
           },
         ],
       };
