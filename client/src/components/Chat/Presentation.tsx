@@ -7,6 +7,7 @@ import DragDropWrapper from '~/components/Chat/Input/Files/DragDropWrapper';
 import { EditorProvider, ArtifactsProvider } from '~/Providers';
 import { useDeleteFilesMutation } from '~/data-provider';
 import Artifacts from '~/components/Artifacts/Artifacts';
+import PrdDashboard from '~/components/PrdDashboard/PrdDashboard';
 import { SidePanelGroup } from '~/components/SidePanel';
 import { useSetFilesToDelete } from '~/hooks';
 import store from '~/store';
@@ -22,6 +23,12 @@ export default function Presentation({ children }: { children: React.ReactNode }
   // arriving via SSE auto-focus through `ToolArtifactCard`'s mount effect
   // (gated on `isSubmitting`), restoring the legacy streaming UX.
   const currentArtifactId = useRecoilValue(store.currentArtifactId);
+
+  // PRD dashboard: only active when the conversation is bound to the PRD agent
+  // (see usePrdDashboard + docs/prd/agent/SETUP.md). Reuses the same right-side
+  // panel slot as artifacts, so this is additive and inert on stock deployments.
+  const prdVisible = useRecoilValue(store.prdDashboardVisible);
+  const prdState = useRecoilValue(store.prdDashboardState);
 
   useResetArtifactsOnConversationChange();
 
@@ -59,6 +66,11 @@ export default function Presentation({ children }: { children: React.ReactNode }
   }, [mutateAsync]);
 
   const artifactsElement = useMemo(() => {
+    // PRD dashboard takes precedence over artifacts in the right panel when
+    // the active conversation is the PRD agent and we have a parsed state.
+    if (prdVisible && prdState != null) {
+      return <PrdDashboard state={prdState} />;
+    }
     if (
       artifactsVisibility === true &&
       currentArtifactId != null &&
@@ -73,7 +85,7 @@ export default function Presentation({ children }: { children: React.ReactNode }
       );
     }
     return null;
-  }, [artifactsVisibility, artifacts, currentArtifactId]);
+  }, [prdVisible, prdState, artifactsVisibility, artifacts, currentArtifactId]);
 
   return (
     <DragDropWrapper className="relative flex w-full grow overflow-hidden bg-presentation">

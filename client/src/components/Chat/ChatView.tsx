@@ -24,6 +24,7 @@ import Landing from './Landing';
 import Header from './Header';
 import Footer from './Footer';
 import { cn } from '~/utils';
+import usePrdDashboard from '~/hooks/usePrdDashboard';
 import store from '~/store';
 
 function LoadingSpinner() {
@@ -72,6 +73,9 @@ function ChatView({ index = 0, project }: { index?: number; project?: TChatProje
   // Auto-resume if navigating back to conversation with active job
   // Wait for messages to load before resuming to avoid race condition
   useResumeOnLoad(conversationId, chatHelpers.getMessages, index, !isLoading);
+
+  // Drive the PRD dashboard (no-op unless this conversation uses the PRD agent).
+  usePrdDashboard(index, messagesTree);
 
   let content: JSX.Element | null | undefined;
   const isLandingPage =
