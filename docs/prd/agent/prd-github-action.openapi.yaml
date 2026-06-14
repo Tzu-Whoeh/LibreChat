@@ -1,100 +1,104 @@
 openapi: 3.1.0
 info:
-  title: PRD GitHub Store
+  title: PRD GitHub Store (via ops control plane)
   description: >
-    供 PRD Agent 读写 PRD 草稿的最小 GitHub Contents API 封装。
-    仅用于 docs/prd/ 路径下的文件读写。
-  version: "1.0.0"
+    供 PRD Agent 读写 PRD 草稿的控制平面封装。
+    通过 ops.xbot.cool/api/v1 中转，content 传明文即可（控制平面处理编码）。
+    仅操作 Tzu-Whoeh/LibreChat 仓库的 docs/prd/ 路径。
+  version: "2.0.0"
 servers:
-  - url: https://api.github.com
+  - url: https://ops.xbot.cool/api/v1
 paths:
-  /repos/{owner}/{repo}/contents/{path}:
-    get:
+  /repo/get:
+    post:
       operationId: getPrdFile
       summary: 读取一个 PRD 草稿文件（用于续聊还原）
-      description: 读取 docs/prd/ 下的指定文件。path 必须以 docs/prd/ 开头。
-      parameters:
-        - name: owner
-          in: path
-          required: true
-          schema: { type: string }
-        - name: repo
-          in: path
-          required: true
-          schema: { type: string }
-        - name: path
-          in: path
-          required: true
-          description: 仓库内文件路径，必须以 docs/prd/ 开头，例如 docs/prd/prd-tool.md
-          schema: { type: string }
-        - name: ref
-          in: query
-          required: false
-          description: 分支或提交，默认仓库默认分支
-          schema: { type: string }
-      responses:
-        "200":
-          description: 文件内容
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  content: { type: string, description: base64 编码的文件内容 }
-                  sha: { type: string, description: 文件 blob 的 sha，更新时需回传 }
-                  path: { type: string }
-        "404":
-          description: 文件不存在（新建 PRD 时的正常情况）
-    put:
-      operationId: putPrdFile
-      summary: 写入/更新一个 PRD 草稿文件
       description: >
-        创建或更新 docs/prd/ 下的文件。更新已有文件时必须传入最新的 sha。
-        path 必须以 docs/prd/ 开头——不要写入此前缀之外的任何路径。
-      parameters:
-        - name: owner
-          in: path
-          required: true
-          schema: { type: string }
-        - name: repo
-          in: path
-          required: true
-          schema: { type: string }
-        - name: path
-          in: path
-          required: true
-          description: 仓库内文件路径，必须以 docs/prd/ 开头
-          schema: { type: string }
+        读取 Tzu-Whoeh/LibreChat 仓库 docs/prd/ 下的指定文件。
+        path 必须以 docs/prd/ 开头。
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [message, content]
+              required: [repo, path]
               properties:
-                message:
+                repo:
                   type: string
-                  description: '提交信息，例如 "prd(prd-tool): update — 5/7 sections complete"'
+                  description: 固定填 "Tzu-Whoeh/LibreChat"
+                  default: "Tzu-Whoeh/LibreChat"
+                path:
+                  type: string
+                  description: 仓库内文件路径，必须以 docs/prd/ 开头，例如 docs/prd/prd-tool.md
+                ref:
+                  type: string
+                  description: 分支，默认 main
+                  default: "main"
+      responses:
+        "200":
+          description: 文件内容（content 为明文字符串）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  content: { type: string, description: 文件内容（明文） }
+                  sha: { type: string, description: 文件 blob 的 sha，更新时须回传 }
+                  path: { type: string }
+        "404":
+          description: 文件不存在（新建 PRD 时的正常情况）
+
+  /repo/put:
+    post:
+      operationId: putPrdFile
+      summary: 写入/更新一个 PRD 草稿文件
+      description: >
+        创建或更新 Tzu-Whoeh/LibreChat 仓库 docs/prd/ 下的文件。
+        content 填明文字符串即可，控制平面会自动处理编码。
+        更新已有文件时必须传入最新的 sha（通过 getPrdFile 获取）。
+        path 必须以 docs/prd/ 开头——不要写入此前缀之外的任何路径。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [repo, path, content, message]
+              properties:
+                repo:
+                  type: string
+                  description: 固定填 "Tzu-Whoeh/LibreChat"
+                  default: "Tzu-Whoeh/LibreChat"
+                path:
+                  type: string
+                  description: 仓库内文件路径，必须以 docs/prd/ 开头
                 content:
                   type: string
-                  description: base64 编码的新文件内容
+                  description: >
+                    文件内容，直接填明文字符串即可（无需 base64 编码）。
+                    控制平面会自动处理。
+                message:
+                  type: string
+                  description: 'Git commit 信息，例如 "prd(slug): update — 5/7 sections complete"'
                 sha:
                   type: string
-                  description: 更新已有文件时必填，为该文件当前 blob 的 sha；新建时省略
+                  description: 更新已有文件时必填：该文件当前 blob 的 sha；新建时省略
                 branch:
                   type: string
-                  description: 目标分支，默认仓库默认分支
+                  description: 目标分支，默认 main
+                  default: "main"
       responses:
         "200":
           description: 更新成功
         "201":
           description: 创建成功
+
 components:
   securitySchemes:
-    githubToken:
+    opsApiKey:
       type: http
       scheme: bearer
-      description: GitHub PAT，权限范围仅需对目标仓库的 contents:write
+      description: ops.xbot.cool 控制平面 API key（Bearer token）
 security:
-  - githubToken: []
+  - opsApiKey: []
