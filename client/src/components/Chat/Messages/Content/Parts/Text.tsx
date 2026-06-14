@@ -4,6 +4,7 @@ import MarkdownLite from '~/components/Chat/Messages/Content/MarkdownLite';
 import Markdown from '~/components/Chat/Messages/Content/Markdown';
 import { useMessageContext } from '~/Providers';
 import { cn } from '~/utils';
+import { stripPrdState } from '~/utils/prdState';
 import store from '~/store';
 
 type TextPartProps = {
@@ -22,15 +23,23 @@ const TextPart = memo(function TextPart({ text, isCreatedByUser, showCursor }: T
   const enableUserMsgMarkdown = useRecoilValue(store.enableUserMsgMarkdown);
   const showCursorState = useMemo(() => showCursor && isSubmitting, [showCursor, isSubmitting]);
 
+  // Strip the PRD dashboard state block from assistant text so the raw JSON
+  // never shows to the user (the dashboard consumes it separately). No-op for
+  // messages without a PRD_STATE block, so this is safe for all conversations.
+  const displayText = useMemo(
+    () => (!isCreatedByUser ? stripPrdState(text) : text),
+    [isCreatedByUser, text],
+  );
+
   const content: ContentType = useMemo(() => {
     if (!isCreatedByUser) {
-      return <Markdown content={text} isLatestMessage={isLatestMessage} />;
+      return <Markdown content={displayText} isLatestMessage={isLatestMessage} />;
     } else if (enableUserMsgMarkdown) {
       return <MarkdownLite content={text} />;
     } else {
       return <>{text}</>;
     }
-  }, [isCreatedByUser, enableUserMsgMarkdown, text, isLatestMessage]);
+  }, [isCreatedByUser, enableUserMsgMarkdown, text, displayText, isLatestMessage]);
 
   return (
     <div
