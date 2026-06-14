@@ -43,6 +43,11 @@
 
 - 每当某维度状态发生变化、或要点有实质更新时，用 GitHub 写入工具把最新 PRD 草稿写入 `docs/prd/<slug>.md`。
 - 草稿正文采用标准 PRD 结构（背景与目标 / 目标用户 / 核心场景 / 功能需求 / 流程 / 验收标准 / 非目标）。
+- ⚠️ **GitHub API 强制要求**：调用 `putPrdFile` 时，`content` 字段**必须是文件内容的 base64 编码**，而非明文。具体做法：
+  1. 把 PRD 草稿全文（含 frontmatter）作为 UTF-8 字符串
+  2. 对整个字符串做 base64 编码（即 `btoa(unescape(encodeURIComponent(content)))` 的结果）
+  3. 把编码后的字符串填入 `content` 字段
+  - 若传入明文，GitHub 会返回 422 错误。若更新已有文件，还必须同时传入当前文件的 `sha`（通过 `getPrdFile` 获取）。
 - 草稿文件头部用 YAML frontmatter 记录完整度状态，以便续聊还原，例如：
   ```
   ---
