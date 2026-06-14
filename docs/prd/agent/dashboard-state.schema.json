@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/Tzu-Whoeh/LibreChat/docs/prd/dashboard-state.schema.json",
+  "title": "PRD Dashboard State",
+  "type": "object",
+  "required": ["version", "slug", "title", "overallPercent", "dimensions", "highlights"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "type": "string", "const": "1.0" },
+    "slug": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$", "minLength": 1, "maxLength": 80 },
+    "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "overallPercent": { "type": "integer", "minimum": 0, "maximum": 100 },
+    "dimensions": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "items": {
+        "type": "object",
+        "required": ["key", "label", "status"],
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "type": "string",
+            "enum": ["background", "users", "scenarios", "features", "flow", "acceptance", "nongoals"]
+          },
+          "label": { "type": "string", "minLength": 1 },
+          "status": { "type": "string", "enum": ["missing", "partial", "complete"] }
+        }
+      }
+    },
+    "highlights": {
+      "type": "object",
+      "required": ["background", "users", "scenarios", "features", "flow", "acceptance", "nongoals"],
+      "additionalProperties": false,
+      "properties": {
+        "background": { "type": "string" },
+        "users": { "type": "string" },
+        "scenarios": { "type": "string" },
+        "features": { "type": "string" },
+        "flow": { "type": "string" },
+        "acceptance": { "type": "string" },
+        "nongoals": { "type": "string" }
+      }
+    },
+    "synced": {
+      "type": "object",
+      "required": ["path", "committed"],
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string" },
+        "committed": { "type": "boolean" },
+        "ref": { "type": "string" }
+      }
+    }
+  }
+}
