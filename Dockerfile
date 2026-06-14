@@ -53,6 +53,13 @@ RUN \
 
 COPY --chown=node:node . .
 
+# PRD dashboard build-time config (see docs/prd/agent/SETUP.md).
+# Must be set BEFORE the frontend build so vite can inline it. When unset,
+# the PRD dashboard stays inert (no agent id to match), so default builds
+# are unaffected.
+ARG VITE_PRD_AGENT_ID=
+ENV VITE_PRD_AGENT_ID=${VITE_PRD_AGENT_ID}
+
 RUN \
     # React client build with configurable memory
     NODE_OPTIONS="--max-old-space-size=${NODE_MAX_OLD_SPACE_SIZE}" npm run frontend; \
