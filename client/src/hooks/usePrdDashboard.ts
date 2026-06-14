@@ -58,7 +58,18 @@ export default function usePrdDashboard(
       if (msg.isCreatedByUser) {
         continue;
       }
-      const text = typeof msg.text === 'string' ? msg.text : '';
+      // Message text may live in `text` (legacy) or in `content` parts
+      // (current content-parts model). Concatenate both so PRD_STATE is found
+      // regardless of which path the message uses.
+      let text = typeof msg.text === 'string' ? msg.text : '';
+      const parts = (msg as TMessage & { content?: Array<{ text?: string; type?: string }> }).content;
+      if (Array.isArray(parts)) {
+        for (const part of parts) {
+          if (part && typeof part.text === 'string') {
+            text += '\n' + part.text;
+          }
+        }
+      }
       const parsed = extractPrdState(text);
       if (parsed) {
         return parsed;
