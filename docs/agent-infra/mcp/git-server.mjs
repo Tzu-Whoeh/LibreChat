@@ -63,7 +63,14 @@ function assertPathAllowed(path) {
   if (ALLOWED_PATHS.length === 0) {
     return; // no restriction configured
   }
-  const ok = ALLOWED_PATHS.some((prefix) => path.startsWith(prefix));
+  // A path is allowed if it falls under an allowed prefix, OR if it IS an
+  // allowed prefix (with or without a trailing slash) — e.g. listing the
+  // scope root "docs/prd" when the prefix is "docs/prd/".
+  const normalized = path.replace(/\/+$/, '');
+  const ok = ALLOWED_PATHS.some((prefix) => {
+    const p = prefix.replace(/\/+$/, '');
+    return path.startsWith(prefix) || normalized === p || path === p;
+  });
   if (!ok) {
     throw new Error(
       `path "${path}" is outside this agent's allowed scope (${ALLOWED_PATHS.join(', ')})`,
@@ -262,15 +269,25 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     if (name === 'listFiles') {
       assertPathAllowed(args.path === '' ? (ALLOWED_PATHS[0] ?? '') : args.path);
-      const data = await opsCall('/repo/list', {
-        repo: REPO,
-        path: args.path ?? '',
-        ref: args.ref || DEFAULT_BRANCH,
-      });
-      return ok({
-        path: data.path,
-        entries: (data.entries || []).map((e) => ({ type: e.type, path: e.path })),
-      });
+      try {
+        const data = await opsCall('/repo/list', {
+          repo: REPO,
+          path: args.path ?? '',
+          ref: args.ref || DEFAULT_BRANCH,
+        });
+        return ok({
+          path: data.path,
+          entries: (data.entries || []).map((e) => ({ type: e.type, path: e.path })),
+        });
+      } catch (err) {
+        // A non-existent directory means "no files yet" (e.g. a brand-new
+        // project). Treat that as an empty listing rather than an error, so
+        // the agent knows to create files instead of getting stuck.
+        if (/not found/i.test(String(err.message || err))) {
+          return ok({ path: args.path ?? '', entries: [], note: 'path does not exist yet (treated as empty)' });
+        }
+        throw err;
+      }
     }
 
     if (name === 'createBranch') {

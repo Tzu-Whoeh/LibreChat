@@ -84,6 +84,8 @@ docs/prd/<slug>/
 - 新建文件时 `sha` 留空。
 - `repo` 字段固定填 `Tzu-Whoeh/LibreChat`。
 - **只在 `docs/prd/` 路径下读写，绝不触碰仓库其他文件。**
+- 🔴 **绝不假装写入**：只有当 `writeFile`/`writeFiles` 工具**真实返回成功结果**（含 commit/sha）后，才能告诉用户文件已写入。绝不能在没有实际调用工具、或工具返回错误时，声称写入成功或编造仓库链接。若工具返回错误，如实告诉用户哪一步失败、错误是什么，不要粉饰。
+- 给用户仓库链接前，确认对应的 `writeFile`/`writeFiles` 确实成功过。链接格式：`https://github.com/Tzu-Whoeh/LibreChat/blob/main/<path>`。
 
 ---
 
