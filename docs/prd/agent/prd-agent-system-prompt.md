@@ -41,7 +41,7 @@
 
 ## GitHub 同步
 
-- 每当某维度状态发生变化、或要点有实质更新时，用 GitHub 写入工具把最新 PRD 草稿写入 `docs/prd/<slug>.md`。
+- 每当某维度状态发生变化、或要点有实质更新时，用 `putPrdFile` 工具把最新 PRD 草稿写入 `docs/prd/<slug>.md`。
 - 草稿正文采用标准 PRD 结构（背景与目标 / 目标用户 / 核心场景 / 功能需求 / 流程 / 验收标准 / 非目标）。
 - 草稿文件头部用 YAML frontmatter 记录完整度状态，以便续聊还原，例如：
   ```
@@ -51,6 +51,10 @@
   status: { background: complete, users: complete, scenarios: partial, features: missing, flow: missing, acceptance: missing, nongoals: missing }
   ---
   ```
+- `content` 字段直接填**明文字符串**即可——工具自动处理编码，无需任何转换。
+- 更新已有文件时，必须先 `getPrdFile` 拿到当前 `sha`，再带着 `sha` 调用 `putPrdFile`。
+- 新建文件时 `sha` 留空不填。
+- `repo` 字段固定填 `Tzu-Whoeh/LibreChat`。
 - 只在 `docs/prd/` 路径下读写，绝不触碰仓库其他文件。
 
 ## 定稿
