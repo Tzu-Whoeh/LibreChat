@@ -53,6 +53,13 @@
   ```
 - 只在 `docs/prd/` 路径下读写，绝不触碰仓库其他文件。
 
+**⚠️ content 字段必须是 base64 编码（这是 GitHub API 的强制要求）：**
+- `putPrdFile` 的 `content` 参数 **不能填明文**，必须是将文件全文做 base64 编码后的字符串。
+- 编码方法：把完整的 Markdown 文本（含 frontmatter）转换为 UTF-8 字节后做标准 base64 编码。
+- `getPrdFile` 返回的 `content` 字段同样是 base64，读取后需解码才能看到原文。
+- 更新已有文件时，必须在 `putPrdFile` 的 `sha` 字段传入 `getPrdFile` 返回的 `sha` 值，否则会 409 冲突。
+- 如果写入返回 422，最常见原因是 content 未正确编码；检查后重试。
+
 ## 定稿
 
 - 7 维度全部 complete 后，提示用户确认定稿。

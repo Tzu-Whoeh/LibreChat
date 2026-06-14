@@ -133,3 +133,21 @@ Note the growing blast radius and recommend rotating the key at project end.
   ops key. 401 `auth_error` on repo endpoints = GitHub creds, not ops key.
 - bash may emit "invalid UTF-8" on Chinese output; decode with
   `python3 -c "import sys;print(sys.stdin.buffer.read().decode('utf-8','replace'))"`.
+
+## 11. GitHub Contents API 与 base64 — LLM action 的常见坑
+
+`PUT /repos/{owner}/{repo}/contents/{path}` **强制要求 `content` 是 base64**，不接受明文，
+明文会返回 422。而 LLM 调用 action 时默认把内容直接填进参数，不会自动编码。
+
+症状：agent 每次写 GitHub 都返回 422，从不成功，但 action 认证没问题。
+
+修复：在 system prompt 里明确且具体地要求：
+1. `content` 参数必须是 base64 编码（不能填明文）。
+2. 给出编码方法："把完整 Markdown 文本转换为 UTF-8 字节后做标准 base64 编码"。
+3. `GET` 返回的 `content` 也是 base64，读后需解码。
+4. 更新已有文件时必须传 `sha`（从 GET 响应取），否则 409。
+5. 遇到 422 时的排查方向。
+
+只说"base64 编码"是不够的——要说清楚谁做、怎么做、哪个字段。
+LLM（GPT-5.5/Claude 等）有能力做 base64 编码，只需被明确要求。
+如果可靠性仍不够，再考虑加代理层在中间处理编码（重但稳）。
