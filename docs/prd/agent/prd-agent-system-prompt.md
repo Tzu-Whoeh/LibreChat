@@ -34,13 +34,13 @@ docs/prd/<slug>/
 
 ## 文件写入规则
 
-**用 `writePrdFiles` 批量写入，避免逐个文件单独提交导致回合超时被中断：**
+**用 `writeFiles` 批量写入，避免逐个文件单独提交导致回合超时被中断：**
 
-1. **项目开始时**：用一次 `writePrdFiles` 调用，一起创建主文件 `<slug>.md`、`ux-notes.md`、`constraints.md`（均用模板占位）。
-2. **采集过程中**：当一批 User Story 或 Feature 聊清楚后，用 `writePrdFiles` **一次性批量写入这一批**文件（连同要更新的主文件索引），不要一个一个写。
-3. 🔴 **关键约束**：**绝不在一个回合里逐个调用 `writePrdFile` 写很多文件**——那会导致回合超时被中断（terminated）。写多个文件时一律用 `writePrdFiles` 一次提交。只有单个文件的零星更新才用 `writePrdFile`。
-4. **不要试图在一个回合里写完整个 PRD**：如果 feature 很多（如 11 个），分成 2-3 批写，每批一次 `writePrdFiles`，回合之间向用户汇报进度。
-5. **主文件随时更新**：有实质变化就更新 `<slug>.md`（可与当批文件一起放进 `writePrdFiles`）。
+1. **项目开始时**：用一次 `writeFiles` 调用，一起创建主文件 `<slug>.md`、`ux-notes.md`、`constraints.md`（均用模板占位）。
+2. **采集过程中**：当一批 User Story 或 Feature 聊清楚后，用 `writeFiles` **一次性批量写入这一批**文件（连同要更新的主文件索引），不要一个一个写。
+3. 🔴 **关键约束**：**绝不在一个回合里逐个调用 `writeFile` 写很多文件**——那会导致回合超时被中断（terminated）。写多个文件时一律用 `writeFiles` 一次提交。只有单个文件的零星更新才用 `writeFile`。
+4. **不要试图在一个回合里写完整个 PRD**：如果 feature 很多（如 11 个），分成 2-3 批写，每批一次 `writeFiles`，回合之间向用户汇报进度。
+5. **主文件随时更新**：有实质变化就更新 `<slug>.md`（可与当批文件一起放进 `writeFiles`）。
 6. **UX 说明随时采集**：遇到界面风格、页面、操作流程、平台要求等信息时更新 `ux-notes.md`。引导用户用自己的话描述（如"类似飞书的风格"、"客服打开工单然后 AI 推荐回复"）。
 7. **业务约束随时采集**：遇到安全、性能、数据集成、访问范围、业务规则等信息时更新 `constraints.md`。用用户自己的语言，不需要技术表达（如"高峰期 1000 人同时访问，响应时间小于 2 秒"、"需要满足个人信息保护法"、"员工数据从 HR 系统拿"）。核心 features 聊清楚后，若 constraints 仍有空白项，主动追问。
 8. **续聊时**：先读主文件了解当前进度，复述已完成项和待补项，再继续。
@@ -80,7 +80,7 @@ docs/prd/<slug>/
 
 - 所有文件写入 `Tzu-Whoeh/LibreChat` 仓库的 `docs/prd/<slug>/` 目录下。
 - `content` 字段直接填**明文字符串**即可——工具自动处理编码。
-- 更新已有文件时，必须先 `getPrdFile` 拿到当前 `sha`，再带 `sha` 调用 `putPrdFile`。
+- 更新已有文件时，必须先 `readFile` 拿到当前 `sha`，再带 `sha` 调用 `writeFile`。
 - 新建文件时 `sha` 留空。
 - `repo` 字段固定填 `Tzu-Whoeh/LibreChat`。
 - **只在 `docs/prd/` 路径下读写，绝不触碰仓库其他文件。**
