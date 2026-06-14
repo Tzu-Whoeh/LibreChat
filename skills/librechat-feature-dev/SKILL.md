@@ -133,3 +133,55 @@ Note the growing blast radius and recommend rotating the key at project end.
   ops key. 401 `auth_error` on repo endpoints = GitHub creds, not ops key.
 - bash may emit "invalid UTF-8" on Chinese output; decode with
   `python3 -c "import sys;print(sys.stdin.buffer.read().decode('utf-8','replace'))"`.
+
+## 11. Generic git MCP server — 设计与坑
+
+把 LibreChat action 换成 MCP server 是正确架构（action UI 在子路径部署下有认证 bug，且 GitHub API 强制 base64 而 LLM 不能可靠编码）。
+
+**为什么走 ops 控制平面而不直连 GitHub：**
+content 传明文 → 控制平面处理 base64 + commit → GitHub。agent 永远传明文，base64 100% 可靠。不依赖本地 git（容器内没有 git），天然与 CI（GitHub Actions）兼容。
+
+**通用 git MCP server 的 scope 控制：**
+同一个 server 二进制，通过环境变量按 agent 配权限：
+- `GIT_REPO`：操作哪个仓库
+- `GIT_ALLOWED_PATHS`：路径前缀白名单（逗号分隔），空=不限
+- `GIT_ALLOW_PR`：true 才暴露 createBranch/createPullRequest
+
+scope 校验要兼容有无尾斜杠：`docs/prd`（无斜杠）和 `docs/prd/`（有斜杠）都应通过，但 `api/` 不行。用 `path.startsWith(prefix) || normalized === prefixNormalized` 而不是单纯 startsWith。
+
+**listFiles 对不存在目录要容错：**
+新项目目录在 GitHub 上不存在，/repo/list 会返回 not_found。应捕获这个错误、返回空列表（语义：新项目，还没有文件），让 agent 知道该创建文件，而不是卡在报错上。
+
+**批量写入是硬性要求，不是优化：**
+LibreChat 单回合有时间上限。逐个调用 writeFile 写 17 个文件会超时被 terminated，后续写入全部取消。对多文件写入一律用 writeFiles（底层 put_many，一次 commit）。prompt 里要明确禁止循环写单文件。
+
+**防幻觉约束必须写进 prompt：**
+agent 在工具全部失效（旧的 prd-github 工具指向不存在的 server）时，会"假装"写成功、编造 GitHub 链接。真机暴露过一次：survey-system 在 GitHub 根本不存在，但 agent 给了"成功"的链接。
+解决：① 工具替换务必验证（mongo 里确认 tools 字段有 _mcp_git 结尾的新工具）；② prompt 明确"只有工具真实返回 commit/sha 才能说写入成功，禁止编造链接"。
+
+**yaml 改动需 docker restart 而非 compose up：**
+librechat.yaml 是挂载文件，compose up 检测不到挂载文件内容变化，不会重启进程。改了 yaml 必须用 `sudo -n docker restart librechat-api` 才能让新配置生效。
+
+**titleModel 用 current_model 而非写死某个模型：**
+写死 gpt-5.5 等特定模型，一旦上游那个 channel 挂了，所有对话起标题全部超时失败（New Chat）。用 `current_model` 让起标题跟着当前对话模型走，只要能聊就能起标题，天然容错。
+
+## 12. 文件太大无法用单条 exec 命令写入
+
+exec 的 cmd 字段有 8192 字符上限。base64 编码一个 10KB 的文件会超限。解决：分块追加到临时 .b64 文件，再一次性 `base64 -d` 解码成目标文件。
+
+```bash
+# 分块写
+echo -n {chunk1} >> /tmp/file.b64
+echo -n {chunk2} >> /tmp/file.b64
+# 解码
+base64 -d /tmp/file.b64 > /target/file.mjs
+rm /tmp/file.b64
+```
+
+## 13. LibreChat action UI 的认证 bug（子路径部署）
+
+在 /librechat 子路径反代部署下，Agent Builder 的 action 保存请求（POST /api/agents/actions/...）在前端发出时不带有效 auth token，后端返回 400/401。根因是前端 token 附加逻辑与子路径部署不兼容。现象：Network 标签无信号（请求根本没发出），Console 有 "Token is not present"。
+
+经多轮排查确认：spec 本身没问题（在容器里用 node 实测 validateAndParseOpenAPISpec / validateActionDomain / isActionDomainAllowed / openapiToFunction 全部通过），问题在 LibreChat 前端代码，无法从服务端修复。
+
+**绕过方案：用 MCP server 代替 action**。MCP 走 librechat.yaml 配置 + 容器内 stdio，完全绕开 action UI 认证问题。
