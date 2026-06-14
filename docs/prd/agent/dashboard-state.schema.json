@@ -1,36 +1,31 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/Tzu-Whoeh/LibreChat/docs/prd/dashboard-state.schema.json",
-  "title": "PRD Dashboard State",
+  "$id": "dashboard-state-v2.schema.json",
+  "title": "PRD Dashboard State v2 (multi-file)",
   "type": "object",
   "required": ["version", "slug", "title", "overallPercent", "dimensions", "highlights"],
   "additionalProperties": false,
   "properties": {
     "version": { "type": "string", "const": "1.0" },
-    "slug": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$", "minLength": 1, "maxLength": 80 },
-    "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "slug": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "title": { "type": "string", "minLength": 1 },
     "overallPercent": { "type": "integer", "minimum": 0, "maximum": 100 },
     "dimensions": {
-      "type": "array",
-      "minItems": 7,
-      "maxItems": 7,
+      "type": "array", "minItems": 7, "maxItems": 7,
       "items": {
         "type": "object",
         "required": ["key", "label", "status"],
         "additionalProperties": false,
         "properties": {
-          "key": {
-            "type": "string",
-            "enum": ["background", "users", "scenarios", "features", "flow", "acceptance", "nongoals"]
-          },
-          "label": { "type": "string", "minLength": 1 },
-          "status": { "type": "string", "enum": ["missing", "partial", "complete"] }
+          "key": { "type": "string", "enum": ["background","users","scenarios","features","flow","acceptance","nongoals"] },
+          "label": { "type": "string" },
+          "status": { "type": "string", "enum": ["missing","partial","complete"] }
         }
       }
     },
     "highlights": {
       "type": "object",
-      "required": ["background", "users", "scenarios", "features", "flow", "acceptance", "nongoals"],
+      "required": ["background","users","scenarios","features","flow","acceptance","nongoals"],
       "additionalProperties": false,
       "properties": {
         "background": { "type": "string" },
@@ -47,10 +42,15 @@
       "required": ["path", "committed"],
       "additionalProperties": false,
       "properties": {
-        "path": { "type": "string" },
+        "path": { "type": "string", "description": "指向目录，如 docs/prd/slug/" },
         "committed": { "type": "boolean" },
         "ref": { "type": "string" }
       }
+    },
+    "files": {
+      "type": "array",
+      "description": "已写入仓库的文件列表（相对于 docs/prd/<slug>/）",
+      "items": { "type": "string" }
     }
   }
 }
