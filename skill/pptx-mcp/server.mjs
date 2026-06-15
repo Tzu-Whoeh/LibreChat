@@ -37,6 +37,7 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { spawn } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, basename } from 'node:path';
 
@@ -46,6 +47,53 @@ const OUTPUT_DIR = process.env.PPTX_OUTPUT_DIR ?? '';
 const PYTHON = process.env.PPTX_PYTHON ?? 'python3';
 const MAX_SLIDES = Number.parseInt(process.env.PPTX_MAX_SLIDES ?? '100', 10);
 const RENDERER = join(__dirname, 'render_pptx.py');
+
+// Design libraries (styles + font pairings). Loaded once, lazily, with a safe
+// fallback to empty so a missing/bad file never crashes the server.
+let _styles = null;
+let _fonts = null;
+function loadJson(file, key) {
+  try {
+    return JSON.parse(readFileSync(join(__dirname, file), 'utf-8'))[key] ?? [];
+  } catch {
+    return [];
+  }
+}
+function getStyles() {
+  if (_styles === null) _styles = loadJson('styles.json', 'styles');
+  return _styles;
+}
+function getFonts() {
+  if (_fonts === null) _fonts = loadJson('fonts.json', 'pairings');
+  return _fonts;
+}
+// Lightweight match: exact id/name first, else keyword/substring overlap score.
+function findBest(items, query) {
+  if (!query) return null;
+  const q = String(query).toLowerCase();
+  const exact = items.find(
+    (it) => (it.id || '').toLowerCase() === q || (it.name || '').toLowerCase() === q,
+  );
+  if (exact) return exact;
+  let best = null;
+  let bestScore = 0;
+  for (const it of items) {
+    const hay = [it.id, it.name, it.essence, it.mood, it.use_when, ...(it.keywords || [])]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+    let score = 0;
+    if (hay.includes(q)) score += 2;
+    for (const kw of it.keywords || []) {
+      if (q.includes(String(kw).toLowerCase())) score += 1;
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      best = it;
+    }
+  }
+  return bestScore > 0 ? best : null;
+}
 
 function assertConfigured() {
   if (!OUTPUT_DIR) {
@@ -183,6 +231,42 @@ const tools = [
       },
     },
   },
+  {
+    name: 'listStyles',
+    description:
+      'List all visual styles in the design library (name, school/master lens, essence, keywords, use_when). Use during the design stage to recommend a visual direction grounded in real options rather than guessing.',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'getStyle',
+    description:
+      'Get one visual style by id/name, or best-matched by a keyword/theme query. Returns accentColor, backgroundColor, the referenced fontPairing, layoutBias and more — feed these straight into renderDeck theme.',
+    inputSchema: {
+      type: 'object',
+      required: ['query'],
+      properties: {
+        query: { type: 'string', description: 'Style id, name, or a theme/keyword to match' },
+      },
+    },
+  },
+  {
+    name: 'listFonts',
+    description:
+      'List all font pairings in the library (title/body fonts for en + zh, mood, keywords). Only installed families render; others fall back.',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'getFont',
+    description:
+      'Get one font pairing by id/name, or best-matched by a keyword/mood query. Returns the en/zh title and body font family names to use in renderDeck theme.',
+    inputSchema: {
+      type: 'object',
+      required: ['query'],
+      properties: {
+        query: { type: 'string', description: 'Pairing id, name, or a mood/keyword to match' },
+      },
+    },
+  },
 ];
 
 const server = new Server(
@@ -195,6 +279,33 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
   try {
+    // Read-only design-library lookups — no OUTPUT_DIR needed.
+    if (name === 'listStyles') {
+      const styles = getStyles().map((s) => ({
+        id: s.id,
+        name: s.name,
+        school: s.school,
+        essence: s.essence,
+        keywords: s.keywords,
+        use_when: s.use_when,
+      }));
+      return ok({ ok: true, count: styles.length, styles });
+    }
+    if (name === 'getStyle') {
+      const s = findBest(getStyles(), args.query);
+      if (!s) throw new Error(`no style matched: ${args.query}`);
+      const pairing = getFonts().find((p) => p.id === s.fontPairing) || null;
+      return ok({ ok: true, style: s, fontPairing: pairing });
+    }
+    if (name === 'listFonts') {
+      return ok({ ok: true, count: getFonts().length, pairings: getFonts() });
+    }
+    if (name === 'getFont') {
+      const p = findBest(getFonts(), args.query);
+      if (!p) throw new Error(`no font pairing matched: ${args.query}`);
+      return ok({ ok: true, fontPairing: p });
+    }
+
     assertConfigured();
 
     if (name === 'renderDeck') {

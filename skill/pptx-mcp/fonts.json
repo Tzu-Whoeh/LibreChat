@@ -1,0 +1,68 @@
+{
+  "_comment": "Font pairing library for the PPT assistant. Each pairing names a title font and a body font for both Latin (en) and Chinese (zh). Only fonts actually installed in the image render correctly; missing fonts fall back. Installed families: Inter, Roboto, Noto Serif, JetBrains Mono, Noto Sans CJK SC (思源黑体), Noto Serif CJK SC (思源宋体), Caveat, Pacifico, Zhi Mang Xing (钟齐志莽行书).",
+  "pairings": [
+    {
+      "id": "free-spirited-master",
+      "name": "洒脱大师感",
+      "mood": "奔放、有张力、手写大师气质",
+      "title": { "en": "Pacifico", "zh": "Zhi Mang Xing" },
+      "body": { "en": "Inter", "zh": "Noto Sans CJK SC" },
+      "keywords": ["手写", "洒脱", "创意", "封面", "毛笔", "行书", "艺术"],
+      "use_when": "创意/艺术/品牌故事类，封面与大标题想要强烈个性，正文仍需清晰"
+    },
+    {
+      "id": "modern-clean",
+      "name": "现代简洁",
+      "mood": "冷静、专业、中性",
+      "title": { "en": "Inter", "zh": "Noto Sans CJK SC" },
+      "body": { "en": "Inter", "zh": "Noto Sans CJK SC" },
+      "keywords": ["极简", "科技", "现代", "中性", "产品", "SaaS"],
+      "use_when": "科技/产品/通用商务，追求干净统一、信息密度高"
+    },
+    {
+      "id": "editorial-serif",
+      "name": "学术衬线",
+      "mood": "严谨、优雅、有权威感",
+      "title": { "en": "Noto Serif", "zh": "Noto Serif CJK SC" },
+      "body": { "en": "Noto Serif", "zh": "Noto Serif CJK SC" },
+      "keywords": ["学术", "严谨", "正式", "研究", "报告", "宋体", "衬线"],
+      "use_when": "学术报告/白皮书/正式演讲，强调权威与可信"
+    },
+    {
+      "id": "serif-title-sans-body",
+      "name": "衬线标题·黑体正文",
+      "mood": "优雅而清晰，对比适中",
+      "title": { "en": "Noto Serif", "zh": "Noto Serif CJK SC" },
+      "body": { "en": "Inter", "zh": "Noto Sans CJK SC" },
+      "keywords": ["优雅", "对比", "杂志", "品牌", "混排"],
+      "use_when": "想要标题有文化质感、正文保持现代清晰的混排场合"
+    },
+    {
+      "id": "business-roboto",
+      "name": "通用商务",
+      "mood": "稳重、亲和、易读",
+      "title": { "en": "Roboto", "zh": "Noto Sans CJK SC" },
+      "body": { "en": "Roboto", "zh": "Noto Sans CJK SC" },
+      "keywords": ["商务", "通用", "稳重", "企业", "汇报"],
+      "use_when": "企业内部汇报/通用商务场合，安全稳妥"
+    },
+    {
+      "id": "technical-mono",
+      "name": "技术等宽",
+      "mood": "工程感、精确、极客",
+      "title": { "en": "JetBrains Mono", "zh": "Noto Sans CJK SC" },
+      "body": { "en": "JetBrains Mono", "zh": "Noto Sans CJK SC" },
+      "keywords": ["技术", "代码", "工程", "等宽", "极客", "开发者"],
+      "use_when": "面向开发者/技术分享，想要工程与代码气质"
+    },
+    {
+      "id": "warm-handwritten",
+      "name": "温暖手写",
+      "mood": "亲切、轻松、有人情味",
+      "title": { "en": "Caveat", "zh": "Zhi Mang Xing" },
+      "body": { "en": "Inter", "zh": "Noto Sans CJK SC" },
+      "keywords": ["温暖", "亲切", "手写", "便签", "生活", "分享"],
+      "use_when": "生活化/温馨/个人分享类，封面想要随手亲切感"
+    }
+  ]
+}

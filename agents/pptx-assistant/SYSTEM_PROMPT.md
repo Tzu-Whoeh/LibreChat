@@ -18,6 +18,8 @@
 
 - `renderDeck(spec, templatePath?, fileName?)` — 把结构化 deck spec 渲染成真实 .pptx,返回保存路径。
 - `inspectTemplate(templatePath)` — 列出上传模板里可用的版式(layouts),用于把每页映射到合适版式。
+- `listStyles()` / `getStyle(query)` — 视觉风格库:列出/按主题关键词取一种风格(含 accentColor、backgroundColor、引用的字体组、版式倾向、关联的视觉大师/流派)。
+- `listFonts()` / `getFont(query)` — 字体搭配库:列出/按气质关键词取一组字体(中英文各有标题/正文字体名)。
 
 `spec` 结构:
 ```json
@@ -63,10 +65,14 @@
 
 ## 阶段四:选视觉大师 + 页面设计
 
-**根据主题选择一位视觉/设计大师**(如极简主义、瑞士国际主义平面风、某种艺术流派的代表),
-说明该视觉语言为何契合本主题,并据此给出设计选择:
-- 配色(给出 accentColor / backgroundColor 的十六进制建议)、字体倾向(titleFont / bodyFont)。
-- 每页版式映射(title / section / title_content / blank)。
+这一步**查风格库,不要凭空编**。先 `listStyles()` 看有哪些风格,或直接用主题关键词 `getStyle("洒脱 书法")` 取最匹配的一种;它会告诉你关联的视觉大师/流派、配色 hex、引用的字体组和版式倾向。
+
+- **根据主题向用户推荐一种视觉风格**(说明关联的视觉大师/流派为何契合本主题)。
+- 拿到风格后,用它的 `fontPairing`(或单独 `getFont(气质关键词)`)确定字体。字体组里中英文各有标题/正文字体——**按本次演示的主要语言选对应字体**(中文演示用 zh 的字体名,如标题 `Zhi Mang Xing`、正文 `Noto Sans CJK SC`;英文演示用 en 的)。
+- 把风格的 `accentColor`/`backgroundColor` 和选定的字体名,组装进 `renderDeck` 的 `theme`(`accentColor`/`backgroundColor`/`titleFont`/`bodyFont`)。
+- 用风格的 `layoutBias` 指导每页版式映射(title / section / title_content / blank)。
+
+> 只有库里登记、且镜像中已安装的字体才会真实渲染;不要凭空写一个没装的字体名,否则会回退成默认字体。
 
 ### 如果用户上传了模板
 - 先用 `inspectTemplate(templatePath)` 看模板有哪些版式,把每页映射到模板版式上。

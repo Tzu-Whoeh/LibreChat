@@ -1,0 +1,101 @@
+{
+  "_comment": "Visual style library for the PPT assistant. Each style references a font pairing id from fonts.json. Colors are hex (no #). These are original entries informed by well-known design movements; masters/schools are named as 'thinking lenses', not quoted. accent/background feed renderDeck's theme.",
+  "styles": [
+    {
+      "id": "swiss-international",
+      "name": "瑞士国际主义",
+      "school": "Swiss / International Typographic Style (Müller-Brockmann 一脉的网格与无衬线传统)",
+      "essence": "严格网格、留白、客观清晰，信息层级靠对齐和大小而非装饰",
+      "accentColor": "D7261E",
+      "backgroundColor": "FFFFFF",
+      "fontPairing": "modern-clean",
+      "layoutBias": ["title", "title_content", "section"],
+      "keywords": ["网格", "无衬线", "客观", "留白", "理性", "瑞士"],
+      "use_when": "数据/理性论证/设计感强的专业演讲，追求秩序与克制"
+    },
+    {
+      "id": "minimal-zen",
+      "name": "极简留白",
+      "school": "Minimalism（少即是多，受日式侘寂与现代主义影响）",
+      "essence": "大面积留白、单一强调色、极少元素，让内容自己说话",
+      "accentColor": "111827",
+      "backgroundColor": "FAFAF8",
+      "fontPairing": "modern-clean",
+      "layoutBias": ["section", "title", "blank"],
+      "keywords": ["极简", "留白", "克制", "禅", "高级感"],
+      "use_when": "高端品牌/理念阐述/想要安静有力量的表达"
+    },
+    {
+      "id": "bauhaus-geometric",
+      "name": "包豪斯几何",
+      "school": "Bauhaus（功能主义，三原色与基本几何形）",
+      "essence": "红黄蓝+黑、圆/方/三角等基本形，理性与构成感",
+      "accentColor": "E63946",
+      "backgroundColor": "FFFFFF",
+      "fontPairing": "business-roboto",
+      "layoutBias": ["title_content", "section"],
+      "keywords": ["几何", "三原色", "构成", "功能主义", "现代设计"],
+      "use_when": "设计/教育/构成感强的主题，想要鲜明而有秩序"
+    },
+    {
+      "id": "memphis-playful",
+      "name": "孟菲斯活泼",
+      "school": "Memphis Group（1980s 后现代，撞色与图形）",
+      "essence": "高饱和撞色、几何碎片、俏皮活力",
+      "accentColor": "FF4D6D",
+      "backgroundColor": "FFF7E6",
+      "fontPairing": "warm-handwritten",
+      "layoutBias": ["title", "title_content"],
+      "keywords": ["撞色", "活泼", "后现代", "俏皮", "年轻"],
+      "use_when": "面向年轻受众/创意活动/活泼轻松的内容"
+    },
+    {
+      "id": "editorial-classic",
+      "name": "经典杂志",
+      "school": "Editorial / Magazine（衬线排版与栏目层级）",
+      "essence": "衬线标题、清晰栏目、强调引文与图文关系",
+      "accentColor": "8C5E2A",
+      "backgroundColor": "FBF8F3",
+      "fontPairing": "serif-title-sans-body",
+      "layoutBias": ["title_content", "section"],
+      "keywords": ["杂志", "衬线", "图文", "文化", "优雅"],
+      "use_when": "文化/品牌故事/内容厚重、想要阅读质感的演示"
+    },
+    {
+      "id": "academic-formal",
+      "name": "学术正式",
+      "school": "Academic（学术海报与论文式的严谨排版）",
+      "essence": "全衬线、稳重配色、清晰的论点-论据结构",
+      "accentColor": "1F3A5F",
+      "backgroundColor": "FFFFFF",
+      "fontPairing": "editorial-serif",
+      "layoutBias": ["title", "title_content", "section"],
+      "keywords": ["学术", "严谨", "研究", "权威", "正式"],
+      "use_when": "学术会议/研究汇报/白皮书，强调可信与逻辑"
+    },
+    {
+      "id": "tech-dark",
+      "name": "科技暗色",
+      "school": "Dark Mode / Tech（深色背景与霓虹强调）",
+      "essence": "深色背景、单一高亮强调色、克制的科技感",
+      "accentColor": "38BDF8",
+      "backgroundColor": "0F172A",
+      "fontPairing": "technical-mono",
+      "layoutBias": ["section", "title_content"],
+      "keywords": ["暗色", "科技", "霓虹", "开发者", "数据"],
+      "use_when": "技术产品/开发者大会/数据仪表盘风格"
+    },
+    {
+      "id": "brush-expressive",
+      "name": "洒脱书写",
+      "school": "Expressive Calligraphy（书法笔意与东方留白）",
+      "essence": "行书/毛笔笔意标题、留白构图、强烈个人气质",
+      "accentColor": "B91C1C",
+      "backgroundColor": "FCFAF6",
+      "fontPairing": "free-spirited-master",
+      "layoutBias": ["section", "title", "blank"],
+      "keywords": ["书法", "行书", "毛笔", "洒脱", "东方", "艺术"],
+      "use_when": "文化/艺术/品牌故事，想要东方书写的洒脱大师感"
+    }
+  ]
+}
