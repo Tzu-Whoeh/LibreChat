@@ -13,7 +13,7 @@ function makeState(overrides: Partial<PrdState> = {}): PrdState {
     version: '1.0',
     slug: 'prd-tool',
     title: 'PRD 采集工具',
-    overallPercent: 29,
+    overallPercent: 25,
     dimensions: [
       { key: 'background', label: '背景与目标', status: 'complete' },
       { key: 'users', label: '目标用户', status: 'complete' },
@@ -21,6 +21,7 @@ function makeState(overrides: Partial<PrdState> = {}): PrdState {
       { key: 'features', label: '功能需求', status: 'missing' },
       { key: 'flow', label: '流程', status: 'missing' },
       { key: 'acceptance', label: '验收标准', status: 'missing' },
+      { key: 'constraints', label: '业务约束', status: 'missing' },
       { key: 'nongoals', label: '非目标', status: 'missing' },
     ],
     highlights: {
@@ -30,6 +31,7 @@ function makeState(overrides: Partial<PrdState> = {}): PrdState {
       features: '',
       flow: '',
       acceptance: '',
+      constraints: '',
       nongoals: '',
     },
     synced: { path: 'docs/prd/prd-tool.md', committed: true, ref: 'main' },
@@ -47,7 +49,7 @@ describe('prdState', () => {
       const state = extractPrdState(wrap(makeState()));
       expect(state).not.toBeNull();
       expect(state?.slug).toBe('prd-tool');
-      expect(state?.overallPercent).toBe(29);
+      expect(state?.overallPercent).toBe(25);
     });
 
     it('returns null when there is no block', () => {
@@ -87,7 +89,7 @@ describe('prdState', () => {
       expect(validatePrdState(makeState({ version: '2.0' }))).toBeNull();
     });
 
-    it('rejects dimension count != 7', () => {
+    it('rejects dimension count != 8', () => {
       const s = makeState();
       s.dimensions.pop();
       expect(validatePrdState(s)).toBeNull();
@@ -110,8 +112,8 @@ describe('prdState', () => {
   });
 
   describe('computePercent / isComplete', () => {
-    it('computes 2/7 => 29', () => {
-      expect(computePercent(makeState().dimensions)).toBe(29);
+    it('computes 2/8 => 25', () => {
+      expect(computePercent(makeState().dimensions)).toBe(25);
     });
 
     it('is not complete when any dimension is unfinished', () => {
@@ -126,7 +128,7 @@ describe('prdState', () => {
     });
   });
 
-  it('exposes the 7 dimensions in canonical order', () => {
+  it('exposes the 8 dimensions in canonical order', () => {
     expect(PRD_DIMENSION_ORDER).toEqual([
       'background',
       'users',
@@ -134,6 +136,7 @@ describe('prdState', () => {
       'features',
       'flow',
       'acceptance',
+      'constraints',
       'nongoals',
     ]);
   });
