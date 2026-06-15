@@ -1,0 +1,11 @@
+{
+  "name": "pptx-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Generic PPTX rendering MCP server (python-pptx backend) for LibreChat.",
+  "main": "server.mjs",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  }
+}
