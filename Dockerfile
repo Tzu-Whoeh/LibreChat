@@ -20,19 +20,27 @@ RUN uv --version
 RUN uv pip install --system --break-system-packages python-pptx==1.0.2
 
 # Fonts for PPT rendering (PPT助手 agent). python-pptx only writes font NAMES into
-# the .pptx; PowerPoint renders the embedded/installed font, so the families the
-# style/font library references must exist in the image. Latin + CJK families come
-# from Alpine's font packages; the Chinese handwriting face (Zhi Mang Xing) is not
-# packaged, so it is fetched from the google/fonts repo (SIL OFL 1.1). fontconfig
-# provides fc-cache so the faces are discoverable.
+# the .pptx; PowerPoint renders the installed font, so families referenced by the
+# style/font library must exist in the image. Base Latin + CJK families come from
+# Alpine packages (verified present). The handwriting faces (Pacifico, Caveat,
+# Zhi Mang Xing) are not reliably packaged in this Alpine release, so they are
+# fetched from the google/fonts repo (all SIL OFL 1.1) with their OFL.txt.
+# fontconfig provides fc-cache so the faces become discoverable.
 RUN apk add --no-cache fontconfig \
     font-inter font-roboto font-noto font-jetbrains-mono \
-    font-noto-cjk \
-    font-caveat font-pacifico
-RUN mkdir -p /usr/share/fonts/zhimangxing \
-    && wget -q -O /usr/share/fonts/zhimangxing/ZhiMangXing-Regular.ttf \
+    font-noto-cjk
+RUN mkdir -p /usr/share/fonts/handwriting \
+    && wget -q -O /usr/share/fonts/handwriting/Pacifico-Regular.ttf \
+       https://raw.githubusercontent.com/google/fonts/main/ofl/pacifico/Pacifico-Regular.ttf \
+    && wget -q -O /usr/share/fonts/handwriting/Pacifico-OFL.txt \
+       https://raw.githubusercontent.com/google/fonts/main/ofl/pacifico/OFL.txt \
+    && wget -q -O "/usr/share/fonts/handwriting/Caveat.ttf" \
+       "https://raw.githubusercontent.com/google/fonts/main/ofl/caveat/Caveat%5Bwght%5D.ttf" \
+    && wget -q -O /usr/share/fonts/handwriting/Caveat-OFL.txt \
+       https://raw.githubusercontent.com/google/fonts/main/ofl/caveat/OFL.txt \
+    && wget -q -O /usr/share/fonts/handwriting/ZhiMangXing-Regular.ttf \
        https://raw.githubusercontent.com/google/fonts/main/ofl/zhimangxing/ZhiMangXing-Regular.ttf \
-    && wget -q -O /usr/share/fonts/zhimangxing/OFL.txt \
+    && wget -q -O /usr/share/fonts/handwriting/ZhiMangXing-OFL.txt \
        https://raw.githubusercontent.com/google/fonts/main/ofl/zhimangxing/OFL.txt \
     && fc-cache -f
 
