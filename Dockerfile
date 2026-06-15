@@ -19,6 +19,23 @@ RUN uv --version
 # frontend build; placed here so the layer caches with the other base deps.
 RUN uv pip install --system --break-system-packages python-pptx==1.0.2
 
+# Fonts for PPT rendering (PPT助手 agent). python-pptx only writes font NAMES into
+# the .pptx; PowerPoint renders the embedded/installed font, so the families the
+# style/font library references must exist in the image. Latin + CJK families come
+# from Alpine's font packages; the Chinese handwriting face (Zhi Mang Xing) is not
+# packaged, so it is fetched from the google/fonts repo (SIL OFL 1.1). fontconfig
+# provides fc-cache so the faces are discoverable.
+RUN apk add --no-cache fontconfig \
+    font-inter font-roboto font-noto font-jetbrains-mono \
+    font-noto-cjk \
+    font-caveat font-pacifico
+RUN mkdir -p /usr/share/fonts/zhimangxing \
+    && wget -q -O /usr/share/fonts/zhimangxing/ZhiMangXing-Regular.ttf \
+       https://raw.githubusercontent.com/google/fonts/main/ofl/zhimangxing/ZhiMangXing-Regular.ttf \
+    && wget -q -O /usr/share/fonts/zhimangxing/OFL.txt \
+       https://raw.githubusercontent.com/google/fonts/main/ofl/zhimangxing/OFL.txt \
+    && fc-cache -f
+
 # Set configurable max-old-space-size with default
 ARG NODE_MAX_OLD_SPACE_SIZE=6144
 ARG NPM_CI_TIMEOUT_SECONDS=1500
