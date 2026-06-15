@@ -21,6 +21,7 @@ export type PrdDimensionKey =
   | 'features'
   | 'flow'
   | 'acceptance'
+  | 'constraints'
   | 'nongoals';
 
 export type PrdStatus = 'missing' | 'partial' | 'complete';
@@ -54,6 +55,7 @@ export const PRD_DIMENSION_ORDER: PrdDimensionKey[] = [
   'features',
   'flow',
   'acceptance',
+  'constraints',
   'nongoals',
 ];
 
@@ -93,7 +95,7 @@ export function validatePrdState(data: unknown): PrdState | null {
   if (typeof d.overallPercent !== 'number') {
     return null;
   }
-  if (!Array.isArray(d.dimensions) || d.dimensions.length !== 7) {
+  if (!Array.isArray(d.dimensions) || d.dimensions.length !== PRD_DIMENSION_ORDER.length) {
     return null;
   }
 
