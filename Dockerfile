@@ -17,7 +17,7 @@ RUN uv --version
 # python-pptx for the pptx-mcp rendering MCP server (used by the PPT助手 agent).
 # Installed system-wide via uv (already present above). Independent of the
 # frontend build; placed here so the layer caches with the other base deps.
-RUN uv pip install --system python-pptx==1.0.2
+RUN uv pip install --system --break-system-packages python-pptx==1.0.2
 
 # Set configurable max-old-space-size with default
 ARG NODE_MAX_OLD_SPACE_SIZE=6144
