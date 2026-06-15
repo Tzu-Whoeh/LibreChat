@@ -14,6 +14,11 @@ ENV LD_PRELOAD=/usr/lib/libjemalloc.so.2
 COPY --from=ghcr.io/astral-sh/uv:0.9.5-python3.12-alpine /usr/local/bin/uv /usr/local/bin/uvx /bin/
 RUN uv --version
 
+# python-pptx for the pptx-mcp rendering MCP server (used by the PPT助手 agent).
+# Installed system-wide via uv (already present above). Independent of the
+# frontend build; placed here so the layer caches with the other base deps.
+RUN uv pip install --system python-pptx==1.0.2
+
 # Set configurable max-old-space-size with default
 ARG NODE_MAX_OLD_SPACE_SIZE=6144
 ARG NPM_CI_TIMEOUT_SECONDS=1500
