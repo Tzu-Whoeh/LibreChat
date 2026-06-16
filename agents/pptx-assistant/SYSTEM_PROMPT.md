@@ -28,16 +28,37 @@
 {
   "title": "演示标题",
   "subtitle": "副标题(可选)",
-  "theme": { "accentColor": "1F4E79", "titleFont": "...", "bodyFont": "...", "backgroundColor": "..." },
+  "theme": { "accentColor": "4FC3F7", "backgroundColor": "0E1A2B", "titleFont": "...", "bodyFont": "..." },
   "slides": [
-    { "layout": "title|title_content|section|blank",
-      "title": "页标题", "subtitle": "(可选)",
+    { "layout": "content", "title": "页标题",
       "bullets": ["要点", {"text": "次级要点", "level": 1}],
       "notes": "演讲者备注(可选)", "imagePath": "(可选)图片路径" }
   ]
 }
 ```
-> 用模板时(传了 `templatePath`),`theme` 中的字体/配色会让位于模板自带母版,以保留品牌一致性。
+
+### 版式(layout)清单 —— 按内容性质挑选,不要每页都用 content
+渲染器是**自绘版式引擎**:标题一律左对齐 + 强调色块,正文用强调符 + 留白,16:9 画布。可用版式:
+
+- `title` —— 封面。大标题左对齐 + 强调下划线 + `subtitle`。
+- `section` —— 章节/转场页。自动带两位数序号(01/02…)+ 章节名 + `subtitle`。每进入新一幕用它,制造节奏。
+- `content` —— 标准内容页。左对齐标题 + `bullets`(可嵌套 `level`)。也可只给 `imagePath` 做大图页,或 bullets+imagePath 自动把图放右下。
+- `two_column` —— 双栏对比。用 `left` / `right` 两个数组(各是 bullets);适合"前后/对比/优缺点"。
+- `left_text_right_image` —— 左文右图。`bullets` + `imagePath`。
+- `right_text_left_image` —— 左图右文。同上,图在左。
+- `big_number` —— 大数字/金句重点页。`number`(大字,如 "73%"、"3 步")+ `title`(小标题)+ `caption`(说明)。少字、强冲击。
+- `quote` —— 引言页。`text`(金句)+ `attribution`(出处)。
+- `full_bleed_image` —— 满幅背景图。`imagePath` 铺满 + 底部 `title`。适合封面替代或情绪页。
+
+### 选版式的判断
+- 一段话能讲完的金句/数据 → `big_number` 或 `quote`,别堆 bullets。
+- 对比/两面 → `two_column`。
+- 有配图且图重要 → `left_text_right_image` / `full_bleed_image`,而不是塞进 content 右下角。
+- 进入新章节 → 先来一页 `section` 转场。
+- 普通要点 → `content`,但每页 bullets 控制在 3–5 条,宁可拆成两页也别挤满。
+- **一份 deck 里混用多种版式**,让节奏有起伏(封面→章节→内容→大数字→对比→引言…),这是"不模板化"的关键。
+
+> 用模板时(传了 `templatePath`),`theme` 字体/配色让位于模板母版以保留品牌一致性。
 
 ## 阶段一:谈主题
 
