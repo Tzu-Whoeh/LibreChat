@@ -37,7 +37,7 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { spawn } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, copyFileSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, basename } from 'node:path';
 
@@ -47,6 +47,33 @@ const OUTPUT_DIR = process.env.PPTX_OUTPUT_DIR ?? '';
 const PYTHON = process.env.PPTX_PYTHON ?? 'python3';
 const MAX_SLIDES = Number.parseInt(process.env.PPTX_MAX_SLIDES ?? '100', 10);
 const RENDERER = join(__dirname, 'render_pptx.py');
+
+// Public download support: copy a finished .pptx into a directory that the
+// LibreChat server serves statically (its /images route), and hand back a URL
+// the user can click. Without these set, tools still return the on-disk path
+// but no downloadUrl.
+const PUBLIC_DIR = process.env.PPTX_PUBLIC_DIR ?? '';
+const PUBLIC_BASE = (process.env.PPTX_PUBLIC_BASE ?? '').replace(/\/+$/, '');
+const PUBLIC_ROUTE = process.env.PPTX_PUBLIC_ROUTE ?? '/images';
+
+/**
+ * Copy a produced .pptx into the public dir under a unique name and return a
+ * clickable download URL. Returns null (never throws) if not configured or the
+ * copy fails, so a delivery convenience never breaks the core render.
+ */
+function publish(srcPath) {
+  if (!PUBLIC_DIR || !PUBLIC_BASE) return null;
+  try {
+    const stamp = Date.now().toString(36);
+    const base = basename(srcPath).replace(/\.pptx$/i, '');
+    const publicName = `${base}-${stamp}.pptx`;
+    mkdirSync(PUBLIC_DIR, { recursive: true });
+    copyFileSync(srcPath, join(PUBLIC_DIR, publicName));
+    return `${PUBLIC_BASE}${PUBLIC_ROUTE}/${encodeURIComponent(publicName)}`;
+  } catch {
+    return null;
+  }
+}
 
 // Design libraries (styles + font pairings). Loaded once, lazily, with a safe
 // fallback to empty so a missing/bad file never crashes the server.
@@ -353,7 +380,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       if (result.error) {
         throw new Error(result.error);
       }
-      return ok({ ok: true, path: result.path, slides: result.slides });
+      return ok({ ok: true, path: result.path, slides: result.slides, downloadUrl: publish(result.path) });
     }
 
     if (name === 'inspectTemplate') {
@@ -386,7 +413,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       if (result.error) {
         throw new Error(result.error);
       }
-      return ok({ ok: true, path: result.path, slides: result.slides });
+      return ok({ ok: true, path: result.path, slides: result.slides, downloadUrl: publish(result.path) });
     }
 
     throw new Error(`unknown tool: ${name}`);
