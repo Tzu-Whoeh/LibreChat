@@ -165,6 +165,11 @@ const tools = [
           properties: {
             title: { type: 'string', description: 'Deck title (used for the title slide and default filename)' },
             subtitle: { type: 'string' },
+            titleSlide: {
+              type: 'boolean',
+              description:
+                'Whether to auto-generate a title slide from title/subtitle. Default true. Set false when rendering a fragment that will be merged into a larger deck (only the first fragment should keep its title slide).',
+            },
             theme: {
               type: 'object',
               description: 'Optional visual theme hints applied when NOT using a template',
@@ -228,6 +233,24 @@ const tools = [
       required: ['templatePath'],
       properties: {
         templatePath: { type: 'string' },
+      },
+    },
+  },
+  {
+    name: 'mergeDecks',
+    description:
+      'Merge several .pptx files (in the given order) into one deck and return its path. Use this for batch/large-deck workflows: render each section as its own small .pptx (first fragment keeps the title slide, the rest set spec.titleSlide=false), then merge them in order. The first input seeds the slide size/theme; subsequent inputs slides are appended. Images are preserved.',
+    inputSchema: {
+      type: 'object',
+      required: ['inputs'],
+      properties: {
+        inputs: {
+          type: 'array',
+          description: 'Ordered list of .pptx paths to concatenate (each from a prior renderDeck call).',
+          items: { type: 'string' },
+          minItems: 1,
+        },
+        fileName: { type: 'string', description: 'Optional output filename (.pptx)' },
       },
     },
   },
@@ -343,6 +366,27 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         throw new Error(result.error);
       }
       return ok({ ok: true, layouts: result.layouts });
+    }
+
+    if (name === 'mergeDecks') {
+      const inputs = args.inputs;
+      if (!Array.isArray(inputs) || inputs.length === 0) {
+        throw new Error('inputs must be a non-empty array of .pptx paths');
+      }
+      for (const p of inputs) {
+        assertSafePath(p, 'inputs');
+      }
+      const fileName = sanitiseFileName(args.fileName || 'deck-merged');
+      const outPath = join(OUTPUT_DIR, fileName);
+      const result = await runRenderer({
+        action: 'merge',
+        inputs,
+        outPath,
+      });
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      return ok({ ok: true, path: result.path, slides: result.slides });
     }
 
     throw new Error(`unknown tool: ${name}`);

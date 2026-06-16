@@ -10,6 +10,8 @@ Jobs:
       -> {"path": str, "slides": int}  on success
   {"action": "inspect", "templatePath": str}
       -> {"layouts": [{"index": int, "name": str}]}
+  {"action": "merge", "inputs": [str, ...], "outPath": str}
+      -> {"path": str, "slides": int}  appends slides of inputs[1:] onto inputs[0]
   any failure -> {"error": str}
 
 The renderer maps a small, stable layout vocabulary onto whatever layouts the
@@ -236,12 +238,14 @@ def action_render(job):
 
     slides_spec = spec.get("slides") or []
     # Optional dedicated title slide if a deck title is provided and the first
-    # slide isn't already a title layout.
+    # slide isn't already a title layout. Set spec.titleSlide=false to suppress
+    # it (used when rendering a fragment that will be merged into a larger deck).
     title = spec.get("title")
     subtitle = spec.get("subtitle")
+    want_title_slide = spec.get("titleSlide", True)
     count = 0
 
-    if title and (not slides_spec or slides_spec[0].get("layout") != "title"):
+    if want_title_slide and title and (not slides_spec or slides_spec[0].get("layout") != "title"):
         layout = _pick_layout(prs, "title")
         slide = prs.slides.add_slide(layout)
         _apply_background(slide, theme)
@@ -282,6 +286,112 @@ def action_inspect(job):
     return {"layouts": layouts}
 
 
+def _copy_slide_into(dest_prs, src_slide):
+    """Deep-copy one slide (XML + its part relationships) from a source
+    presentation into dest_prs. python-pptx has no public 'copy slide' API,
+    so we clone the slide part's element and re-attach external relationships
+    (images, media) by copying the referenced parts and rewriting r:embed/r:id.
+
+    This avoids the duplicate-slideN.xml / dropped-slide corruption that occurs
+    when naively reusing a finished deck as a template.
+    """
+    import copy
+    from pptx.oxml.ns import qn
+    from pptx.opc.package import Part
+    from pptx.opc.packuri import PackURI
+
+    # Use the first available layout in the destination as the new slide's layout.
+    dest_layout = dest_prs.slide_layouts[0]
+    new_slide = dest_prs.slides.add_slide(dest_layout)
+
+    # Remove every shape the blank layout seeded, so we start from an empty slide
+    # and bring over exactly the source slide's shape tree.
+    spTree = new_slide.shapes._spTree
+    for shape in list(new_slide.shapes):
+        spTree.remove(shape._element)
+
+    # Deep-copy each top-level shape element from the source slide.
+    src_part = src_slide.part
+    dest_part = new_slide.part
+    # Map old rId -> new rId for any relationships referenced by the copied shapes.
+    rId_map = {}
+
+    def _clone_related_part(old_rId):
+        if old_rId in rId_map:
+            return rId_map[old_rId]
+        rel = src_part.rels[old_rId]
+        if rel.is_external:
+            new_rId = dest_part.rels.get_or_add_ext_rel(rel.reltype, rel.target_ref)
+        else:
+            src_target = rel.target_part
+            # copy the binary part (e.g. image) into the dest package, letting
+            # next_partname fill the numbering into a '%d' template. Preserve the
+            # source extension so content-type detection stays correct.
+            src_name = str(src_target.partname)
+            ext = src_name.rsplit(".", 1)[-1] if "." in src_name else "bin"
+            partname = dest_part.package.next_partname("/ppt/media/image%d." + ext)
+            new_part = Part(partname, src_target.content_type, dest_part.package, src_target.blob)
+            new_rId = dest_part.relate_to(new_part, rel.reltype)
+        rId_map[old_rId] = new_rId
+        return new_rId
+
+    for shp in src_slide.shapes._spTree.iterchildren():
+        tag = shp.tag
+        # skip the non-shape children that the spTree starts with
+        if tag.endswith("}nvGrpSpPr") or tag.endswith("}grpSpPr"):
+            continue
+        cloned = copy.deepcopy(shp)
+        # rewrite any r:embed / r:link / r:id attributes to remapped rIds
+        for el in cloned.iter():
+            for attr in (qn("r:embed"), qn("r:link"), qn("r:id")):
+                val = el.get(attr)
+                if val and val in src_part.rels:
+                    el.set(attr, _clone_related_part(val))
+        spTree.append(cloned)
+
+    # Bring over speaker notes if present.
+    try:
+        if src_slide.has_notes_slide and src_slide.notes_slide.notes_text_frame.text:
+            new_slide.notes_slide.notes_text_frame.text = (
+                src_slide.notes_slide.notes_text_frame.text
+            )
+    except Exception:
+        pass
+
+
+def action_merge(job):
+    """Merge several .pptx files (in order) into one deck.
+
+    Job: {"action":"merge", "inputs":[path, ...], "outPath": path}
+    The first input seeds the base (preserving its theme/size); subsequent
+    inputs' slides are appended in order. Returns {"path", "slides"}.
+    """
+    _load_pptx()
+    from pptx import Presentation
+
+    inputs = job.get("inputs") or []
+    out_path = job.get("outPath")
+    if not isinstance(inputs, list) or len(inputs) < 1:
+        raise ValueError("inputs must be a non-empty list of .pptx paths")
+    if not out_path:
+        raise ValueError("outPath is required")
+    for p in inputs:
+        if not p or not os.path.exists(p):
+            raise ValueError(f"input does not exist: {p}")
+
+    # Seed from the first deck so slide size + theme carry over.
+    base = Presentation(inputs[0])
+    for extra_path in inputs[1:]:
+        src = Presentation(extra_path)
+        for slide in src.slides:
+            _copy_slide_into(base, slide)
+
+    os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
+    base.save(out_path)
+    total = len(base.slides._sldIdLst)
+    return {"path": out_path, "slides": total}
+
+
 def main():
     raw = sys.stdin.read()
     try:
@@ -295,6 +405,8 @@ def main():
             _emit(action_render(job))
         elif action == "inspect":
             _emit(action_inspect(job))
+        elif action == "merge":
+            _emit(action_merge(job))
         else:
             _fail(f"unknown action: {action}")
     except Exception as e:

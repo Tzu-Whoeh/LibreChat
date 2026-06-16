@@ -21,6 +21,7 @@
 - `listStyles()` / `getStyle(query)` — 视觉风格库:列出/按主题关键词取一种风格(含 accentColor、backgroundColor、引用的字体组、版式倾向、关联的视觉大师/流派)。
 - `listFonts()` / `getFont(query)` — 字体搭配库:列出/按气质关键词取一组字体(中英文各有标题/正文字体名)。
 - `generateImage(prompt, fileName?)` — 按文字描述生成一张配图,返回保存的图片路径。把该路径填进某页 `spec.slides[].imagePath`,渲染时就会嵌进幻灯片。
+- `mergeDecks(inputs, fileName?)` — 把多个 .pptx(按给定顺序)合并成一个完整 deck,返回路径。用于分页生成的大型 deck:每段单独 `renderDeck` 出小 .pptx,最后按顺序合并。图片会保留。
 
 `spec` 结构:
 ```json
@@ -92,12 +93,29 @@
 
 ## 阶段五:生成可编辑的 .pptx
 
-把定稿的大纲 + 设计组装成一个完整 `spec`,**一次** `renderDeck` 调用生成(不要每页一次调用)。
+把定稿的大纲 + 设计组装成 `spec` 去 `renderDeck`。**根据 deck 大小选两种方式之一:**
 
-- 传了模板就带 `templatePath`;否则用 `theme` 表达视觉大师的选择。
-- 若阶段四生成了配图,把各页的图片路径填进对应 `slides[].imagePath` 一并渲染。
+### 小 deck(约 ≤8 页):一次过
+- **一次** `renderDeck` 调用,把所有页放进一个 `spec`(不要每页一次调用)。
+- 传了模板就带 `templatePath`;否则用 `theme` 表达视觉风格。
+- 阶段四生成了配图,把各页图片路径填进对应 `slides[].imagePath`。
+
+### 大 deck(约 >8 页,或一次生成容易超时/失败):分页生成 + 合并
+大请求容易在传输中被中断,所以拆开做。关键是**风格统一**:
+
+1. **先定一份"设计契约"并固定下来**——同一份 `theme`(`accentColor`/`backgroundColor`/`titleFont`/`bodyFont`,来自阶段四的风格库/字体库)+ 版式规则 + 配图风格描述。**之后每一段都用完全相同的这份 theme**,这样各段拼起来风格一致。
+2. **分段渲染**,每段一个小 `renderDeck`:
+   - **第一段**保留封面(正常带 `title`/`subtitle`,即 `titleSlide` 默认 true)。
+   - **后续每一段都设 `spec.titleSlide: false`**,只放该段的内容页——否则每段都会多出一张标题页。
+   - 每段都用同一份 theme;有配图就在该段内 `generateImage` 并填 `imagePath`。
+   - 每段拿到一个 .pptx 路径,**按顺序记下来**。
+3. **合并**:把所有段的路径**按顺序**传给 `mergeDecks(inputs)`,得到完整 deck 的最终路径。第一段在最前(含封面)。
+4. 只把 `mergeDecks` 返回的**最终路径**交给用户。
+
+### 两种方式都遵守
 - 调用成功后工具会返回真实的 `path`。**只有在工具确实返回了 path 时,才告诉用户文件已生成,并把该路径交给用户。**
 - 工具报错(isError / error 字段)时,如实说明失败原因并修正后重试,**绝不编造成功或假路径**。
+- 分页时某一段失败:重试那一段即可,不必从头再来;全部段成功后再 `mergeDecks`。
 
 ## 纪律
 
