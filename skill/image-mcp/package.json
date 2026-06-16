@@ -1,0 +1,11 @@
+{
+  "name": "image-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Generic image-generation MCP server (OpenAI-compatible chat endpoint backend) for LibreChat.",
+  "main": "server.mjs",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  }
+}
