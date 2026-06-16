@@ -8,6 +8,13 @@
  * it to IMAGE_OUTPUT_DIR, and returns the saved file path. That path can be
  * dropped straight into pptx-mcp renderDeck's `imagePath`, or shown in chat.
  *
+ * In addition to the on-disk path (used by pptx-mcp for slide rendering), the
+ * tool also publishes a copy under IMAGE_PUBLIC_DIR (an unauthenticated,
+ * browser-reachable directory served by LibreChat's /images route) and returns
+ * a fully-qualified `url`. When showing the image to the user in chat, use the
+ * `url` field in markdown (`![alt](url)`) — never the `path`, which is a
+ * container-internal filesystem path the browser cannot fetch.
+ *
  * Why chat/completions (not /images/generations): the configured gateway's
  * image models (e.g. gemini-3-pro-image-preview) return the image as a
  * `data:image/...;base64,...` markdown image in the chat message content, not
@@ -23,7 +30,7 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync, copyFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const OUTPUT_DIR = process.env.IMAGE_OUTPUT_DIR ?? '';
@@ -31,6 +38,16 @@ const API_KEY = process.env.IMAGE_GEN_API_KEY ?? '';
 const BASEURL = (process.env.IMAGE_GEN_BASEURL ?? 'https://api.openai.com/v1').replace(/\/+$/, '');
 const MODEL = process.env.IMAGE_GEN_MODEL ?? 'gpt-image-1';
 const TIMEOUT_MS = Number.parseInt(process.env.IMAGE_GEN_TIMEOUT_MS ?? '120000', 10);
+
+// Public, browser-reachable publishing. PUBLIC_DIR is a directory served
+// unauthenticated under LibreChat's /images route; PUBLIC_BASE is the
+// fully-qualified origin INCLUDING any reverse-proxy subpath (e.g.
+// https://p.xbot.cool/librechat) and PUBLIC_ROUTE is the URL path that maps to
+// PUBLIC_DIR (default /images/gen). If PUBLIC_DIR is unset, publishing is
+// skipped and only `path` is returned (back-compat with pptx-only use).
+const PUBLIC_DIR = process.env.IMAGE_PUBLIC_DIR ?? '';
+const PUBLIC_BASE = (process.env.IMAGE_PUBLIC_BASE ?? '').replace(/\/+$/, '');
+const PUBLIC_ROUTE = (process.env.IMAGE_PUBLIC_ROUTE ?? '/images/gen').replace(/\/+$/, '');
 
 function ok(payload) {
   return { content: [{ type: 'text', text: JSON.stringify(payload) }] };
@@ -65,6 +82,22 @@ function extractDataUri(content) {
   const m = content.match(/data:image\/([a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=]+)/);
   if (!m) return null;
   return { ext: m[1].toLowerCase().replace('jpeg', 'jpg'), b64: m[2] };
+}
+
+/**
+ * Copy a generated file into the public directory and return its URL, or null
+ * if publishing is not configured. Best-effort: a publish failure must not
+ * fail image generation, since the on-disk path is still useful for pptx.
+ */
+function publish(fileName, srcPath) {
+  if (!PUBLIC_DIR || !PUBLIC_BASE) return null;
+  try {
+    mkdirSync(PUBLIC_DIR, { recursive: true });
+    copyFileSync(srcPath, join(PUBLIC_DIR, fileName));
+    return `${PUBLIC_BASE}${PUBLIC_ROUTE}/${fileName}`;
+  } catch {
+    return null;
+  }
 }
 
 async function callGateway(prompt) {
@@ -109,7 +142,7 @@ const tools = [
   {
     name: 'generateImage',
     description:
-      'Generate an image from a text prompt and save it to disk. Returns the saved file path, which can be used as an imagePath for slide rendering or shown to the user. Use a detailed, descriptive prompt (subject, style, colors, composition, background).',
+      'Generate an image from a text prompt and save it to disk. Returns both a publicly-reachable `url` (use this in markdown when showing the image to the user) and an on-disk `path` (use this as an imagePath for slide rendering). Use a detailed, descriptive prompt (subject, style, colors, composition, background).',
     inputSchema: {
       type: 'object',
       required: ['prompt'],
@@ -141,7 +174,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       mkdirSync(OUTPUT_DIR, { recursive: true });
       const outPath = join(OUTPUT_DIR, fileName);
       writeFileSync(outPath, Buffer.from(b64, 'base64'));
-      return ok({ ok: true, path: outPath, model: MODEL });
+      const url = publish(fileName, outPath);
+      return ok({ ok: true, url, path: outPath, model: MODEL });
     }
     throw new Error(`unknown tool: ${name}`);
   } catch (err) {
